@@ -470,13 +470,13 @@ pml_string = """
 """
 
 
-PIN_VERDE = 13
-PIN_VERMELHO = 12
-PIN_AZUL = 11
-PIN_AMARELO = 10
+PIN_VERDE = 13       #P0
+PIN_VERMELHO = 12    #P1
+PIN_AZUL = 11        #P2    
+PIN_AMARELO = 10     #P3
 
-BUTTON_VERDE = 18
-BUTTON_VERMELHO = 19
+BUTTON_1 = 18
+BUTTON_2 = 19
 BUTTON_AZUL = 20
 BUTTON_AMARELO = 21
 
@@ -486,10 +486,10 @@ pin_vermelho = Pin(PIN_VERMELHO, Pin.OUT)
 pin_azul = Pin(PIN_AZUL, Pin.OUT)
 pin_amarelo = Pin(PIN_AMARELO, Pin.OUT)
 
-button_verde = Pin(BUTTON_VERDE, Pin.IN, Pin.PULL_UP)
-button_vermelho = Pin(BUTTON_VERMELHO, Pin.IN, Pin.PULL_UP)
-button_azul = Pin(BUTTON_AZUL, Pin.IN, Pin.PULL_UP)
-button_amarelo = Pin(BUTTON_AMARELO, Pin.IN, Pin.PULL_UP)
+button_1 = Pin(BUTTON_1, Pin.IN, Pin.PULL_UP) # Pino 18
+button_2 = Pin(BUTTON_2, Pin.IN, Pin.PULL_UP) # Pino 19
+# button_azul = Pin(BUTTON_AZUL, Pin.IN, Pin.PULL_UP)
+# button_amarelo = Pin(BUTTON_AMARELO, Pin.IN, Pin.PULL_UP)
 
 def extrair_places(pml_string):
     places = []
@@ -618,48 +618,63 @@ def mapear_transicoes():
     
     return transicoes_possiveis, mapa_destinos
 
-# Modifica a função transicao_estado para usar o mapeamento automático
+def atualizar_leds(estado):
+    # Primeiro, desliga todos os LEDs
+    pin_verde.value(0)
+    pin_vermelho.value(0)
+    pin_azul.value(0)
+    pin_amarelo.value(0)
+    
+    # Liga o LED correspondente ao estado atual
+    if estado == "P0":
+        pin_verde.value(1)
+    elif estado == "P1":
+        pin_vermelho.value(1)
+    elif estado == "P2":
+        pin_azul.value(1)
+    elif estado == "P3":
+        pin_amarelo.value(1)
+
 def transicao_estado(estado, transicoes_possiveis, mapa_destinos):
-    # Limpa o terminal (opcional)
-    print("\033[H\033[J")  # Limpa a tela
-    
     print(f"\nEstado atual: {estado}")
-    print("\nArcos da Rede de Petri para o estado atual:")
-    print("------------------------")
-    
-    # Mostra apenas os arcos do estado atual
-    for arco in lista_arcos:
-        if arco['Source'] == estado:
-            print(f"ID: {arco['ID']}")
-            print(f"De: {arco['Source']}")
-            print(f"Para: {arco['Target']}")
-            print(f"Inscricao: {arco['Inscription']}")
-            print("------------------------")
-    
     print("\nTransicoes possiveis a partir do estado atual:")
-    for transicao in transicoes_possiveis[estado]:
-        print(f"- {transicao} -> {mapa_destinos[transicao]}")
+    
+    # Organiza as transições em ordem crescente
+    transicoes = sorted(transicoes_possiveis[estado])
+    if len(transicoes) >= 1:
+        print(f"Button 1 -> {transicoes[0]} -> {mapa_destinos[transicoes[0]]}")
+    if len(transicoes) >= 2:
+        print(f"Button 2 -> {transicoes[1]} -> {mapa_destinos[transicoes[1]]}")
     
     while True:
-        transicao = input("\nDigite a transicao desejada: ").upper()
-        if transicao in transicoes_possiveis[estado]:
-            novo_estado = mapa_destinos[transicao]
-            
-            # Atualiza os valores Default
-            for elem in elementos:
-                if elem['Type'] == 'Place' and elem['ID'] == estado:
-                    elem['Default'] = "0"
-                    break
-            
-            for elem in elementos:
-                if elem['Type'] == 'Place' and elem['ID'] == novo_estado:
-                    elem['Default'] = "1"
-                    break
-            
-            print(f"\nTransicao concluida. Novo estado: {novo_estado}")
-            return novo_estado
-        else:
-            print(f"Transicao invalida. Escolha uma das transicoes possiveis.")
+        # Verifica os botões
+        if not button_1.value():  # Button 1 pressionado (lembre-se que PULL_UP inverte a lógica)
+            if len(transicoes) >= 1:
+                novo_estado = mapa_destinos[transicoes[0]]
+                sleep(0.2)  # Debounce
+                break
+        elif not button_2.value():  # Button 2 pressionado
+            if len(transicoes) >= 2:
+                novo_estado = mapa_destinos[transicoes[1]]
+                sleep(0.2)  # Debounce
+                break
+        
+        sleep(0.1)  # Pequeno delay para não sobrecarregar o processador
+    
+    # Atualiza os valores Default
+    for elem in elementos:
+        if elem['Type'] == 'Place' and elem['ID'] == estado:
+            elem['Default'] = "0"
+            break
+    
+    for elem in elementos:
+        if elem['Type'] == 'Place' and elem['ID'] == novo_estado:
+            elem['Default'] = "1"
+            break
+    
+    print(f"\nTransicao concluida. Novo estado: {novo_estado}")
+    atualizar_leds(novo_estado)
+    return novo_estado
 
 # Modifica o loop principal para continuar automaticamente
 while True:
@@ -670,17 +685,15 @@ while True:
         # Na primeira iteração, começa com o estado inicial
         if 'estado_atual' not in locals():
             estado_atual = valida_estado_inicial()
+            # Inicializa os LEDs com o estado inicial
+            atualizar_leds(estado_atual)
         
         if estado_atual:
             # Obtém o próximo estado e atualiza estado_atual
             estado_atual = transicao_estado(estado_atual, transicoes_possiveis, mapa_destinos)
             
     except KeyboardInterrupt:
-        print("\nPrograma finalizado pelo usuário.")
+        print("\nPrograma finalizado pelo usuario.")
         break
 
-
-#TODO: Buscar o parametro / Orientação
-#TODO: Buscar peso do arco (seta)
-#TODO: Refazer todo o processo de transição olhando apenas o XML e não a imagem
 
