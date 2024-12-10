@@ -475,10 +475,11 @@ PIN_VERMELHO = 12    #P1
 PIN_AZUL = 11        #P2    
 PIN_AMARELO = 10     #P3
 
-BUTTON_1 = 18
-BUTTON_2 = 19
-BUTTON_AZUL = 20
-BUTTON_AMARELO = 21
+BUTTON_1 = 16
+BUTTON_2 = 17
+BUTTON_3 = 18
+BUTTON_4 = 19
+BUTTON_5 = 20
 
 # pin = Pin("LED", Pin.OUT)
 pin_verde = Pin(PIN_VERDE, Pin.OUT)
@@ -486,10 +487,11 @@ pin_vermelho = Pin(PIN_VERMELHO, Pin.OUT)
 pin_azul = Pin(PIN_AZUL, Pin.OUT)
 pin_amarelo = Pin(PIN_AMARELO, Pin.OUT)
 
-button_1 = Pin(BUTTON_1, Pin.IN, Pin.PULL_UP) # Pino 18
-button_2 = Pin(BUTTON_2, Pin.IN, Pin.PULL_UP) # Pino 19
-# button_azul = Pin(BUTTON_AZUL, Pin.IN, Pin.PULL_UP)
-# button_amarelo = Pin(BUTTON_AMARELO, Pin.IN, Pin.PULL_UP)
+button_1 = Pin(BUTTON_1, Pin.IN, Pin.PULL_UP) # Pino 16
+button_2 = Pin(BUTTON_2, Pin.IN, Pin.PULL_UP) # Pino 17
+button_3 = Pin(BUTTON_3, Pin.IN, Pin.PULL_UP) # Pino 18
+button_4 = Pin(BUTTON_4, Pin.IN, Pin.PULL_UP) # Pino 19
+button_5 = Pin(BUTTON_5, Pin.IN, Pin.PULL_UP) # Pino 20
 
 def extrair_places(pml_string):
     places = []
@@ -637,29 +639,48 @@ def atualizar_leds(estado):
 
 def transicao_estado(estado, transicoes_possiveis, mapa_destinos):
     print(f"\nEstado atual: {estado}")
-    print("\nTransicoes possiveis a partir do estado atual:")
-    
-    # Organiza as transições em ordem crescente
-    transicoes = sorted(transicoes_possiveis[estado])
-    if len(transicoes) >= 1:
-        print(f"Button 1 -> {transicoes[0]} -> {mapa_destinos[transicoes[0]]}")
-    if len(transicoes) >= 2:
-        print(f"Button 2 -> {transicoes[1]} -> {mapa_destinos[transicoes[1]]}")
+    # print("\nTransicoes possíveis:")
     
     while True:
-        # Verifica os botões
-        if not button_1.value():  # Button 1 pressionado (lembre-se que PULL_UP inverte a lógica)
-            if len(transicoes) >= 1:
-                novo_estado = mapa_destinos[transicoes[0]]
-                sleep(0.2)  # Debounce
+        # Button 1 - Controla T0 e T1 (P0 <-> P2)
+        if not button_1.value():
+            if estado == "P0" and "T0" in transicoes_possiveis[estado]:
+                novo_estado = mapa_destinos["T0"]
                 break
-        elif not button_2.value():  # Button 2 pressionado
-            if len(transicoes) >= 2:
-                novo_estado = mapa_destinos[transicoes[1]]
-                sleep(0.2)  # Debounce
+            elif estado == "P2" and "T1" in transicoes_possiveis[estado]:
+                novo_estado = mapa_destinos["T1"]
+                break
+        
+        # Button 2 - Controla T2 (P2 -> P1)
+        elif not button_2.value():
+            if estado == "P2" and "T2" in transicoes_possiveis[estado]:
+                novo_estado = mapa_destinos["T2"]
+                break
+        
+        # Button 3 - Controla T8 (P0 -> P1)
+        elif not button_3.value():
+            if estado == "P0" and "T8" in transicoes_possiveis[estado]:
+                novo_estado = mapa_destinos["T8"]
+                break
+        
+        # Button 4 - Controla T4 e T5 (P1 <-> P3)
+        elif not button_4.value():
+            if estado == "P1" and "T5" in transicoes_possiveis[estado]:
+                novo_estado = mapa_destinos["T5"]
+                break
+            elif estado == "P3" and "T4" in transicoes_possiveis[estado]:
+                novo_estado = mapa_destinos["T4"]
+                break
+        
+        # Button 5 - Controla T6 (P3 -> P0)
+        elif not button_5.value():
+            if estado == "P3" and "T6" in transicoes_possiveis[estado]:
+                novo_estado = mapa_destinos["T6"]
                 break
         
         sleep(0.1)  # Pequeno delay para não sobrecarregar o processador
+    
+    sleep(0.2)  # Debounce após pressionar botão
     
     # Atualiza os valores Default
     for elem in elementos:
